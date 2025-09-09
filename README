@@ -1,0 +1,21 @@
+# Dynamic Programming (DP) Algorithms
+
+This repository contains implementations and explanations of various dynamic programming algorithms and techniques.
+
+## Contents
+
+- Classic DP problems (e.g., Fibonacci, Knapsack, Longest Common Subsequence)
+- Code samples in multiple languages
+- Explanations and comments for each algorithm
+
+## Getting Started
+
+Clone the repository and explore the code samples in the `src` directory.
+
+## Contributing
+
+Contributions are welcome! Please submit a pull request or open an issue for suggestions.
+
+## License
+
+This project is licensed under the MIT License.
