@@ -254,6 +254,11 @@
             transition: background 0.5s ease;
         }
         
+        .decision-source {
+            background-color: #c8e6c9 !important;
+            font-weight: bold;
+        }
+        
         .formula {
             background: #f8f9fa;
             border-left: 4px solid #667eea;
@@ -343,7 +348,6 @@
             border-radius: 4px;
         }
         
-        
         footer {
             text-align: center;
             margin-top: 30px;
@@ -425,6 +429,7 @@ Example:
             <div class="legend-item"><div class="legend-color" style="border: 3px solid #ff00ff;"></div><span>Backtracking</span></div>
             <div class="legend-item"><div class="legend-color" style="border: 3px solid #FFD700;"></div><span>In Solution</span></div>
             <div class="legend-item"><div class="legend-color" style="background: #ccc; opacity: 0.5;"></div><span>Excluded</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: #c8e6c9;"></div><span>Winning Value</span></div>
         </div>
         
         <div class="visualization">
@@ -445,11 +450,11 @@ Example:
         
         <div class="panel">
             <h3>🧮 Dynamic Programming Computation</h3>
-            <div class="formula">OPT(j) = max{ OPT(j-1), v[j] + OPT(p(j)) }</div>
+            <div class="formula">OPT(j) = max{ OPT(j-1), v<sub>j</sub> + OPT(p<sub>j</sub>) }</div>
             <div class="explanation" id="currentStep">Click "Load Data" and then "Start Algorithm" to begin.</div>
             <div style="overflow-x: auto;">
                 <table id="dpTable">
-                    <thead><tr><th>j</th><th>OPT(j)</th><th>OPT(j-1)</th><th>v[j] + OPT(p(j))</th><th>Decision</th></tr></thead>
+                    <thead><tr><th>j</th><th>p(j)</th><th>OPT(j-1)</th><th>v<sub>j</sub> + OPT(p<sub>j</sub>)</th><th>OPT(j)</th><th>Decision</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -467,10 +472,9 @@ Example:
             </div>
         </div>
 
-        
         <footer>
             <p>
-                Created by <a href="https://github.com/FernwehZHUO" target="_blank" rel="noopener noreferrer">ChenZhuo</a>
+                Created by <a href="https://github.com/FernwehZHUO" target="_blank" rel="noopener noreferrer">FernwehZHUO</a>
             </p>
         </footer>
 
@@ -685,14 +689,24 @@ Example:
                 <b>Computing OPT(${j}):</b>
                 <ul>
                     <li>Option 1 (Skip interval ${j}): Value = OPT(${j-1}) = <b>${option1}</b></li>
-                    <li>Option 2 (Take interval ${j}): Value = v[${j}] + OPT(p(${j})) = ${interval.value} + OPT(${pj}) = <b>${option2}</b></li>
+                    <li>Option 2 (Take interval ${j}): Value = v<sub>${j}</sub> + OPT(p<sub>${j}</sub>) = ${interval.value} + OPT(${pj}) = <b>${option2}</b></li>
                 </ul>
                 Decision: <b>${decisions[j].charAt(0).toUpperCase() + decisions[j].slice(1)}</b>. OPT(${j}) is set to <b>${opt[j]}</b>.`;
 
             const dpTbody = document.querySelector('#dpTable tbody');
             const row = dpTbody.insertRow();
             row.id = `dp-row-${j}`;
-            row.innerHTML = `<td>${j}</td><td>${opt[j]}</td><td>${option1}</td><td>${option2}</td><td>${decisions[j]}</td>`;
+            const decisionClass = decisions[j] === 'take' ? 'decision-source' : '';
+            const skipClass = decisions[j] === 'skip' ? 'decision-source' : '';
+
+            row.innerHTML = `
+                <td>${j}</td>
+                <td>${pj}</td>
+                <td class="${skipClass}">${option1}</td>
+                <td class="${decisionClass}">${option2}</td>
+                <td><b>${opt[j]}</b></td>
+                <td>${decisions[j]}</td>
+            `;
             row.classList.add('highlight');
             setTimeout(() => row.classList.remove('highlight'), 1000);
         }
@@ -733,13 +747,18 @@ Example:
                 setButtonsState(false, false, false, false, false, false);
                 document.getElementById('backtrackExplanation').innerHTML = `<b>Backtracking Complete!</b> The optimal set of intervals has been found.`;
                 document.querySelectorAll('.interval.backtrack-current').forEach(el => el.classList.remove('backtrack-current'));
+                
+                sortedIntervals.forEach((interval, index) => {
+                    if (!solution.includes(interval)) {
+                        document.getElementById(`interval-${index}`).classList.add('excluded');
+                    }
+                });
                 return;
             }
 
             const j = currentBacktrackStep;
             const interval = sortedIntervals[j - 1];
             
-            // UI Highlighting
             document.querySelectorAll('.interval.backtrack-current').forEach(el => el.classList.remove('backtrack-current'));
             document.getElementById(`interval-${j-1}`).classList.add('backtrack-current');
 
@@ -752,13 +771,21 @@ Example:
             if (decisions[j] === 'take') {
                 solution.unshift(interval);
                 document.getElementById(`interval-${j-1}`).classList.add('selected');
-                explanationText = `At step <b>j=${j}</b>, the decision was to <b>TAKE</b> interval ${j}. Adding it to the solution. Moving to check <b>p(${j}) = ${p[j]}</b>.`;
-                pathDiv.innerHTML = `<b>j=${j}</b>: Take interval ${j} (value ${interval.value}). Jump to j=${p[j]}.`;
+                
+                explanationText = `Examining <b>j=${j}</b>. Decision was to <b>TAKE</b>. <ul><li>Interval ${j} is added to the solution.</li><li>We now <b>JUMP</b> to the last compatible subproblem, which is <b>p(${j}) = ${p[j]}</b>.</li></ul>`;
+                pathDiv.innerHTML = `<b>j=${j}</b>: Take interval ${j}. Jump to j=${p[j]}.`;
+
+                for (let i = j - 2; i >= p[j]; i--) {
+                    document.getElementById(`interval-${i}`).classList.add('excluded');
+                }
+
                 currentBacktrackStep = p[j];
             } else {
                 document.getElementById(`interval-${j-1}`).classList.add('excluded');
-                explanationText = `At step <b>j=${j}</b>, the decision was to <b>SKIP</b> interval ${j}. Moving to check <b>j-1 = ${j-1}</b>.`;
+                
+                explanationText = `Examining <b>j=${j}</b>. Decision was to <b>SKIP</b>. <ul><li>Interval ${j} is not in the solution.</li><li>We continue to the next smaller subproblem, <b>j-1 = ${j-1}</b>.</li></ul>`;
                 pathDiv.innerHTML = `<b>j=${j}</b>: Skip interval ${j}. Move to j=${j-1}.`;
+                
                 currentBacktrackStep = j - 1;
             }
 
